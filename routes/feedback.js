@@ -24,6 +24,21 @@ router.get('/vehicle/:vehicleId', async (req, res) => {
   }
 });
 
+router.get('/transaction/:transactionId', async (req, res) => {
+  try {
+    const [[feedback]] = await pool.query(
+      `SELECT f.*, p.Name AS Customer_Name FROM FEEDBACK f
+       JOIN PERSON p ON f.Customer_Account_ID = p.Account_ID
+       WHERE f.Transaction_ID = ?`,
+      [req.params.transactionId]
+    );
+    res.json({ success: true, data: feedback || null });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: 'Server error.' });
+  }
+});
+
 // Review submition
 router.post('/', auth, async (req, res) => {
   const { transaction_id, score, comments } = req.body;

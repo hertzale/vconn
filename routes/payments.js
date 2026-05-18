@@ -59,39 +59,44 @@ router.get('/:txId', auth, async (req, res) => {
 
 // Payment record generation
 router.post('/', auth, async (req, res) => {
-  const { transaction_id } = req.body;
+  const { transaction_id, total_amount, payment_method, payment_date, payment_status } = req.body;
   if (!transaction_id) return res.status(400).json({ success: false, message: 'transaction_id is required.' });
 
   try {
     const [[tx]] = await pool.query(
       `SELECT rt.*, v.Daily_Rate FROM RENTAL_TRANSACTION rt
        JOIN VEHICLE v ON rt.Vehicle_ID = v.Vehicle_ID
-       WHERE rt.Transaction_ID = ? AND rt.Customer_Account_ID = ?`,
+       WHERE rt.Transaction_ID = ? AND rt.Owner_Account_ID = ?`,
       [transaction_id, req.user.account_id]
     );
     if (!tx) return res.status(404).json({ success: false, message: 'Transaction not found or not yours.' });
-    if (tx.Rental_Status !== 'Confirmed') return res.status(400).json({ success: false, message: 'Payment can only be created for a Confirmed transaction.' });
+
+    const allowedStatuses = ['Confirmed', 'Reserved', 'Ongoing', 'Completed'];
+    if (!allowedStatuses.includes(tx.Rental_Status)) {
+      return res.status(400).json({ success: false, message: `Cannot create payment for a transaction with status '${tx.Rental_Status}'.` });
+    }
 
     const [[existing]] = await pool.query(`SELECT Payment_ID FROM PAYMENT WHERE Transaction_ID = ?`, [transaction_id]);
     if (existing) return res.status(409).json({ success: false, message: 'Payment already exists for this transaction.' });
 
-    const days       = tx.Rental_Duration || 1;
-    const serviceFee = tx.With_Driver ? tx.Daily_Rate * days * 0.10 : 0;
-    const total      = (tx.Daily_Rate * days) + serviceFee;
+    const days = tx.Rental_Duration || 1;
+    const computedTotal = total_amount || (tx.Daily_Rate * days);
 
     const paymentID = await genID('PAYMENT');
-    const today     = new Date().toISOString().slice(0, 10);
+    const today = payment_date || new Date().toISOString().slice(0, 10);
+    const method = payment_method || 'Cash';
+    const status = payment_status || 'Pending';
 
     await pool.query(
       `INSERT INTO PAYMENT (Payment_ID, Transaction_ID, Total_Amount, Payment_Method, Payment_Date, Payment_Status)
-       VALUES (?, ?, ?, 'Cash', ?, 'Pending')`,
-      [paymentID, transaction_id, total.toFixed(2), today]
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [paymentID, transaction_id, computedTotal, method, today, status]
     );
 
     res.status(201).json({
       success: true,
-      message: 'Payment record created. Pay cash on pickup.',
-      data: { payment_id: paymentID, total_amount: total.toFixed(2), rental_days: days, service_fee: serviceFee.toFixed(2) }
+      message: 'Payment record created.',
+      data: { Payment_ID: paymentID, total_amount: computedTotal }
     });
   } catch (err) {
     console.error(err);

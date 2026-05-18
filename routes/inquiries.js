@@ -70,11 +70,8 @@ router.post('/', auth, async (req, res) => {
     message, offered_price, sender_type
   } = req.body;
 
-  if (!vehicle_id || !rental_duration || !pickup_location || !drop_off_location) {
-    return res.status(400).json({
-      success: false,
-      message: 'vehicle_id, rental_duration, pickup_location, and drop_off_location are required.'
-    });
+  if (!vehicle_id) {
+  return res.status(400).json({ success: false, message: 'vehicle_id is required.' });
   }
 
   try {
@@ -125,8 +122,8 @@ router.post('/', auth, async (req, res) => {
       [
         inquiryID, trip_id || null, vehicle_id,
         req.user.account_id, vehicle.Owner_Account_ID,
-        rental_duration, distance_km || null,
-        pickup_location, drop_off_location,
+        rental_duration, distance_km || null, 
+        pickup_location || 'TBD', drop_off_location || 'TBD',
         start_date || null, end_date || null,
         with_driver ? 1 : 0,
         customerMessage,
