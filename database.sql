@@ -150,6 +150,8 @@ CREATE TABLE IF NOT EXISTS INQUIRY (
     End_Date                 DATE          DEFAULT NULL,
     With_Driver              TINYINT(1)    DEFAULT 0,
     Customer_Message         VARCHAR(150)  DEFAULT NULL,
+    Offered_Price            DECIMAL(10,2) DEFAULT NULL,
+    Sender_Type              VARCHAR(20)   DEFAULT 'Customer',
     Inquiry_Status           VARCHAR(30)   DEFAULT 'Pending',
     Inquiry_Date             DATE          NOT NULL,
     Owner_Response_Type      VARCHAR(10)   DEFAULT NULL,

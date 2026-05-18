@@ -66,7 +66,8 @@ router.post('/', auth, async (req, res) => {
   const {
     vehicle_id, trip_id, rental_duration,
     distance_km, pickup_location, drop_off_location,
-    start_date, end_date, with_driver, customer_message
+    start_date, end_date, with_driver,
+    message, offered_price, sender_type
   } = req.body;
 
   if (!vehicle_id || !rental_duration || !pickup_location || !drop_off_location) {
@@ -110,12 +111,17 @@ router.post('/', auth, async (req, res) => {
     const inquiryID = await genID('INQUIRY');
     const today     = new Date().toISOString().slice(0, 10);
 
+    const normalizedSenderType = sender_type === 'Owner' ? 'Owner' : 'Customer';
+    const customerMessage = normalizedSenderType === 'Customer' ? message || null : null;
+    const ownerMessage = normalizedSenderType === 'Owner' ? message || null : null;
+
     await pool.query(
       `INSERT INTO INQUIRY
          (Inquiry_ID, Trip_ID, Vehicle_ID, Customer_Account_ID, Owner_Account_ID,
           Rental_Duration, Distance_KM, Pickup_Location, Drop_off_Location,
-          Start_Date, End_Date, With_Driver, Customer_Message, Inquiry_Status, Inquiry_Date)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,'Pending',?)`,
+          Start_Date, End_Date, With_Driver, Customer_Message, Owner_Message,
+          Offered_Price, Sender_Type, Inquiry_Status, Inquiry_Date)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'Pending',?)`,
       [
         inquiryID, trip_id || null, vehicle_id,
         req.user.account_id, vehicle.Owner_Account_ID,
@@ -123,7 +129,10 @@ router.post('/', auth, async (req, res) => {
         pickup_location, drop_off_location,
         start_date || null, end_date || null,
         with_driver ? 1 : 0,
-        customer_message || null,
+        customerMessage,
+        ownerMessage,
+        offered_price || null,
+        normalizedSenderType,
         today
       ]
     );
