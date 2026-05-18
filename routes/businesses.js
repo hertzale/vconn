@@ -16,6 +16,8 @@ router.get('/', async (req, res) => {
         b.*,
         p.Name            AS Owner_Name,
         p.Contact_Number  AS Owner_Contact,
+        p.Contact_Number  AS Business_ContactNo,
+        p.Email           AS Business_Email,
         COUNT(v.Vehicle_ID)                                         AS Vehicle_Count,
         GROUP_CONCAT(DISTINCT v.Vehicle_Type)                       AS Vehicle_Types,
         MIN(v.Daily_Rate)                                           AS Min_Rate,
@@ -95,7 +97,9 @@ router.get('/', async (req, res) => {
 router.get('/mine', auth, async (req, res) => {
   try {
     const [[biz]] = await pool.query(
-      `SELECT b.*, p.Name AS Owner_Name, p.Email AS Owner_Email
+      `SELECT b.*, p.Name AS Owner_Name, p.Email AS Owner_Email,
+              p.Contact_Number AS Business_ContactNo,
+              p.Email AS Business_Email
        FROM BUSINESS b
        JOIN PERSON p ON b.Owner_Account_ID = p.Account_ID
        WHERE b.Owner_Account_ID = ?`,
@@ -114,7 +118,9 @@ router.get('/mine', auth, async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const [[biz]] = await pool.query(
-      `SELECT b.*, p.Name AS Owner_Name, p.Contact_Number AS Owner_Contact
+      `SELECT b.*, p.Name AS Owner_Name, p.Contact_Number AS Owner_Contact,
+              p.Contact_Number AS Business_ContactNo,
+              p.Email AS Business_Email
        FROM BUSINESS b
        JOIN PERSON p ON b.Owner_Account_ID = p.Account_ID
        WHERE b.Business_ID = ? AND b.Is_Active = 1`,
