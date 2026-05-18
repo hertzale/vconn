@@ -227,9 +227,12 @@ router.put('/:id', auth, async (req, res) => {
 
     const {
       business_name, business_address, description,
-      contact_number, email, operating_hours,
+      contact_number, email, business_contactno,
+      business_email, operating_hours,
       latitude, longitude
     } = req.body;
+    const businessContact = contact_number ?? business_contactno;
+    const businessEmail = email ?? business_email;
 
     await pool.query(
       `UPDATE BUSINESS SET
@@ -239,7 +242,7 @@ router.put('/:id', auth, async (req, res) => {
        WHERE Business_ID = ?`,
       [
         business_name, business_address, description || null,
-        contact_number || null, email || null, operating_hours || null,
+        businessContact || null, businessEmail || null, operating_hours || null,
         latitude || null, longitude || null, req.params.id
       ]
     );

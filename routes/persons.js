@@ -63,11 +63,18 @@ router.get('/me', auth, async (req, res) => {
 
 // Profile Update 
 router.put('/me', auth, async (req, res) => {
-    const { name, address, contact_number, drivers_license, email } = req.body;
+    const { name, person_name, address, contact_number, drivers_license, email } = req.body;
+    const updatedName = name ?? person_name;
     try {
       await pool.query(
-        `UPDATE PERSON SET Name=?, Address=?, Contact_Number=?, Drivers_License=?, Email=? WHERE Account_ID=?`,
-        [name, address, contact_number, drivers_license || null, email || null, req.user.account_id]
+        `UPDATE PERSON SET
+           Name = COALESCE(?, Name),
+           Address = COALESCE(?, Address),
+           Contact_Number = COALESCE(?, Contact_Number),
+           Drivers_License = COALESCE(?, Drivers_License),
+           Email = COALESCE(?, Email)
+         WHERE Account_ID = ?`,
+        [updatedName, address, contact_number, drivers_license, email, req.user.account_id]
       );
     res.json({ success: true, message: 'Profile updated.' });
   } catch (err) {
