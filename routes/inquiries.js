@@ -233,67 +233,115 @@ router.patch('/:id/counter', auth, async (req, res) => {
   }
 });
 
-// Customer responds after owner has quoted
+// Customer or owner responds to a quote/counter-offer
 router.patch('/:id/respond', auth, async (req, res) => {
   const { decision, counter_price, customer_counter_message } = req.body;
 
   try {
     const [[inquiry]] = await pool.query(`SELECT * FROM INQUIRY WHERE Inquiry_ID = ?`, [req.params.id]);
     if (!inquiry) return res.status(404).json({ success: false, message: 'Inquiry not found.' });
-    if (inquiry.Customer_Account_ID !== req.user.account_id)
-      return res.status(403).json({ success: false, message: 'Only the customer can respond to a quote.' });
-    if (inquiry.Inquiry_Status !== 'Owner_Quoted')
-      return res.status(400).json({ success: false, message: `Cannot respond to an inquiry with status "${inquiry.Inquiry_Status}".` });
 
-    let newStatus;
-    let finalPrice = null;
-    let resolvedDecision = decision;
+    const isCustomer = inquiry.Customer_Account_ID === req.user.account_id;
+    const isOwner = inquiry.Owner_Account_ID === req.user.account_id;
+    if (!isCustomer && !isOwner)
+      return res.status(403).json({ success: false, message: 'Only the customer or owner can respond to this inquiry.' });
 
-    if (inquiry.Owner_Response_Type === 'range') {
-      // If the owner gave a range then customer must counter with a specific price
-      if (!counter_price)
-        return res.status(400).json({ success: false, message: 'counter_price is required when owner gave a range.' });
-      newStatus        = 'Negotiating';
-      resolvedDecision = 'negotiate';
+    if (isCustomer) {
+      if (inquiry.Inquiry_Status !== 'Owner_Quoted')
+        return res.status(400).json({ success: false, message: `Cannot respond to an inquiry with status "${inquiry.Inquiry_Status}".` });
 
-    } else {
-      // If the owner gave a fixed price then customer decides yes/no/negotiate
-      if (!decision || !['accept', 'decline', 'negotiate'].includes(decision))
-        return res.status(400).json({ success: false, message: 'decision must be "accept", "decline", or "negotiate".' });
-      if (decision === 'negotiate' && !counter_price)
-        return res.status(400).json({ success: false, message: 'counter_price is required when negotiating.' });
+      let newStatus;
+      let finalPrice = null;
+      let resolvedDecision = decision;
 
-      if (decision === 'accept') {
-        newStatus  = 'Confirmed';
-        finalPrice = inquiry.Owner_Set_Price;
-      } else if (decision === 'decline') {
-        newStatus = 'Cancelled';
+      if (inquiry.Owner_Response_Type === 'range') {
+        if (!counter_price)
+          return res.status(400).json({ success: false, message: 'counter_price is required when owner gave a range.' });
+        newStatus        = 'Negotiating';
+        resolvedDecision = 'negotiate';
       } else {
-        newStatus = 'Negotiating';
+        if (!decision || !['accept', 'decline', 'negotiate'].includes(decision))
+          return res.status(400).json({ success: false, message: 'decision must be "accept", "decline", or "negotiate".' });
+        if (decision === 'negotiate' && !counter_price)
+          return res.status(400).json({ success: false, message: 'counter_price is required when negotiating.' });
+
+        if (decision === 'accept') {
+          newStatus  = 'Confirmed';
+          finalPrice = inquiry.Owner_Set_Price;
+        } else if (decision === 'decline') {
+          newStatus = 'Cancelled';
+        } else {
+          newStatus = 'Negotiating';
+        }
       }
+
+      await pool.query(
+        `UPDATE INQUIRY SET
+           Inquiry_Status           = ?,
+           Customer_Decision        = ?,
+           Customer_Counter_Price   = ?,
+           Customer_Counter_Message = ?,
+           Final_Agreed_Price       = ?
+         WHERE Inquiry_ID = ?`,
+        [newStatus, resolvedDecision, counter_price || null, customer_counter_message || null, finalPrice, req.params.id]
+      );
+
+      const messages = {
+        Confirmed:   'You accepted the price! Inquiry confirmed. You can now book the vehicle.',
+        Cancelled:   'You declined the offer. Inquiry cancelled.',
+        Negotiating: 'Your counter-offer has been sent to the owner.'
+      };
+
+      return res.json({ success: true, message: messages[newStatus], data: { new_status: newStatus, final_price: finalPrice } });
+    }
+
+    // Owner response flow
+    if (inquiry.Inquiry_Status !== 'Negotiating')
+      return res.status(400).json({ success: false, message: `Owner can only respond when status is Negotiating, not "${inquiry.Inquiry_Status}".` });
+
+    if (!decision || !['accept', 'decline', 'negotiate'].includes(decision))
+      return res.status(400).json({ success: false, message: 'decision must be "accept", "decline", or "negotiate".' });
+    if (decision === 'negotiate' && !counter_price)
+      return res.status(400).json({ success: false, message: 'counter_price is required when negotiating.' });
+
+    let ownerNewStatus;
+    let ownerFinalPrice = null;
+    let ownerCounterPrice = null;
+
+    if (decision === 'accept') {
+      ownerNewStatus  = 'Confirmed';
+      ownerFinalPrice = inquiry.Customer_Counter_Price;
+    } else if (decision === 'decline') {
+      ownerNewStatus = 'Cancelled';
+    } else {
+      ownerNewStatus = 'Owner_Quoted';
+      ownerCounterPrice = counter_price;
     }
 
     await pool.query(
       `UPDATE INQUIRY SET
-         Inquiry_Status           = ?,
-         Customer_Decision        = ?,
-         Customer_Counter_Price   = ?,
-         Customer_Counter_Message = ?,
-         Final_Agreed_Price       = ?
+         Inquiry_Status    = ?,
+         Owner_Set_Price   = ?,
+         Owner_Message     = ?
        WHERE Inquiry_ID = ?`,
-      [newStatus, resolvedDecision, counter_price || null, customer_counter_message || null, finalPrice, req.params.id]
+      [
+        ownerNewStatus,
+        ownerCounterPrice,
+        customer_counter_message || null,
+        req.params.id
+      ]
     );
 
-    const messages = {
-      Confirmed:   'You accepted the price! Inquiry confirmed. You can now book the vehicle.',
-      Cancelled:   'You declined the offer. Inquiry cancelled.',
-      Negotiating: 'Your counter-offer has been sent to the owner.'
+    const ownerMessages = {
+      Confirmed: 'Customer counter-offer accepted. Inquiry is now confirmed.',
+      Cancelled: 'Customer counter-offer declined.',
+      Owner_Quoted: 'Counter-offer sent back to the customer.'
     };
 
-    res.json({
+    return res.json({
       success: true,
-      message: messages[newStatus],
-      data: { new_status: newStatus, final_price: finalPrice }
+      message: ownerMessages[ownerNewStatus],
+      data: { new_status: ownerNewStatus, final_price: ownerFinalPrice }
     });
   } catch (err) {
     console.error(err);

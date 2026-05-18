@@ -26,10 +26,11 @@ router.get('/', async (req, res) => {
 router.get('/my', auth, async (req, res) => {
   try {
     const [vehicles] = await pool.query(
-      `SELECT v.*, p.Address AS Owner_Address 
-      FROM VEHICLE V
+      `SELECT v.Vehicle_ID, v.Business_ID, v.*, p.Address AS Owner_Address 
+      FROM VEHICLE v
       JOIN PERSON p ON v.Owner_Account_ID = p.Account_ID
-      WHERE v.Owner_Account_ID = ?`, [req.user.account_id]
+      WHERE v.Owner_Account_ID = ?
+      ORDER BY v.Vehicle_ID`, [req.user.account_id]
     );
     res.json({ success: true, data: vehicles });
   } catch (err) {

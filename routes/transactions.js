@@ -27,7 +27,7 @@ router.get('/', auth, async (req, res) => {
     if (status) { conditions.push(`rt.Rental_Status = ?`); params.push(status); }
 
     const [rows] = await pool.query(
-      `SELECT rt.*,
+      `SELECT rt.Owner_Account_ID, rt.Customer_Account_ID, rt.*,
               v.Vehicle_Type, v.Vehicle_Model, v.Plate_Number, v.Daily_Rate,
               c.Name AS Customer_Name,
               o.Name AS Owner_Name,
@@ -55,15 +55,17 @@ router.get('/', auth, async (req, res) => {
 router.get('/:id', auth, async (req, res) => {
   try {
     const [[tx]] = await pool.query(
-      `SELECT rt.*,
+      `SELECT rt.Owner_Account_ID, rt.Customer_Account_ID, rt.*,
               v.Vehicle_Type, v.Vehicle_Model, v.Plate_Number, v.Daily_Rate,
               c.Name AS Customer_Name, c.Contact_Number AS Customer_Contact,
               o.Name AS Owner_Name,    o.Contact_Number AS Owner_Contact,
-              DATEDIFF(rt.End_Date_and_Time, rt.Start_Date_and_Time) AS Rental_Duration
+              DATEDIFF(rt.End_Date_and_Time, rt.Start_Date_and_Time) AS Rental_Duration,
+              pay.Total_Amount
        FROM RENTAL_TRANSACTION rt
        JOIN VEHICLE v ON rt.Vehicle_ID = v.Vehicle_ID
        JOIN PERSON c  ON rt.Customer_Account_ID = c.Account_ID
        JOIN PERSON o  ON rt.Owner_Account_ID    = o.Account_ID
+       LEFT JOIN PAYMENT pay ON pay.Transaction_ID = rt.Transaction_ID
        WHERE rt.Transaction_ID = ?`,
       [req.params.id]
     );
