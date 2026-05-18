@@ -75,7 +75,7 @@ CREATE TABLE IF NOT EXISTS RENTAL_TRANSACTION (
     FOREIGN KEY (Vehicle_ID)          REFERENCES VEHICLE(Vehicle_ID),
     FOREIGN KEY (Customer_Account_ID) REFERENCES PERSON(Account_ID),
     FOREIGN KEY (Owner_Account_ID)    REFERENCES PERSON(Account_ID),
-    CHECK (Rental_Status IN ('Pending', 'Confirmed', 'Ongoing', 'Completed', 'Cancelled'))
+    CHECK (Rental_Status IN ('Pending', 'Reserved', 'Ongoing', 'Completed', 'Cancelled'))
 );
 
 -- ── PAYMENT ──────────────────────────────────────────────────
