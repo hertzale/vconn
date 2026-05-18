@@ -75,7 +75,7 @@ CREATE TABLE IF NOT EXISTS RENTAL_TRANSACTION (
     FOREIGN KEY (Vehicle_ID)          REFERENCES VEHICLE(Vehicle_ID),
     FOREIGN KEY (Customer_Account_ID) REFERENCES PERSON(Account_ID),
     FOREIGN KEY (Owner_Account_ID)    REFERENCES PERSON(Account_ID),
-    CHECK (Rental_Status IN ('Pending', 'Reserved', 'Ongoing', 'Completed', 'Cancelled'))
+    CHECK (Rental_Status IN ('Pending', 'Confirmed', 'Reserved', 'Ongoing', 'Completed', 'Cancelled', 'Overdue'))
 );
 
 -- ── PAYMENT ──────────────────────────────────────────────────
@@ -154,6 +154,7 @@ CREATE TABLE IF NOT EXISTS INQUIRY (
     Sender_Type              VARCHAR(20)   DEFAULT 'Customer',
     Inquiry_Status           VARCHAR(30)   DEFAULT 'Pending',
     Inquiry_Date             DATE          NOT NULL,
+    Created_At               DATETIME      DEFAULT CURRENT_TIMESTAMP,
     Owner_Response_Type      VARCHAR(10)   DEFAULT NULL,
     Owner_Price_Min          DECIMAL(10,2) DEFAULT NULL,
     Owner_Price_Max          DECIMAL(10,2) DEFAULT NULL,
@@ -163,6 +164,7 @@ CREATE TABLE IF NOT EXISTS INQUIRY (
     Customer_Counter_Price   DECIMAL(10,2) DEFAULT NULL,
     Customer_Counter_Message VARCHAR(150)  DEFAULT NULL,
     Final_Agreed_Price       DECIMAL(10,2) DEFAULT NULL,
+    Agreed_Price             DECIMAL(10,2) DEFAULT NULL,
     Transaction_ID           VARCHAR(12)   DEFAULT NULL,
     Updated_At               DATETIME      DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (Trip_ID)             REFERENCES TRIP(Trip_ID),
@@ -170,13 +172,13 @@ CREATE TABLE IF NOT EXISTS INQUIRY (
     FOREIGN KEY (Customer_Account_ID) REFERENCES PERSON(Account_ID),
     FOREIGN KEY (Owner_Account_ID)    REFERENCES PERSON(Account_ID),
     FOREIGN KEY (Transaction_ID)      REFERENCES RENTAL_TRANSACTION(Transaction_ID),
-    CHECK (Inquiry_Status IN ('Pending','Owner_Quoted','Negotiating','Confirmed','Cancelled','Booked'))
+    CHECK (Inquiry_Status IN ('Pending','Owner_Quoted','Negotiating','Accepted','Rejected','Confirmed','Cancelled','Booked'))
 );
 
 -- ── NOTIFICATION ─────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS NOTIFICATION (
     Notification_ID   VARCHAR(12)  NOT NULL PRIMARY KEY,
-    Account_ID        VARCHAR(12),
+    Account_ID        VARCHAR(12)  NOT NULL,
     Notification_Type VARCHAR(30)  NOT NULL,
     Message           VARCHAR(150),
     Reference_ID      VARCHAR(12)  NOT NULL,
