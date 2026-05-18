@@ -13,7 +13,7 @@ router.get('/', async (req, res) => {
 
     let sql = `
       SELECT
-        b.*,
+        b.*, b.Owner_Account_ID,
         p.Name            AS Owner_Name,
         p.Contact_Number  AS Owner_Contact,
         b.Contact_Number  AS Business_ContactNo,
@@ -66,23 +66,31 @@ router.get('/', async (req, res) => {
 
     // Attach vehicles to each business row
   const bizIds = rows.map(b => b.Business_ID);
+  const ownerIds = rows.map(b => b.Owner_Account_ID);
   let vehicles = [];
   if (bizIds.length > 0) {
     const placeholders = bizIds.map(() => '?').join(',');
+    const ownerPlaceholders = ownerIds.map(() => '?').join(',');
     const [vRows] = await pool.query(
       `SELECT v.*, p.Address AS Owner_Address
       FROM VEHICLE v
       JOIN PERSON p ON v.Owner_Account_ID = p.Account_ID
-      WHERE v.Business_ID IN (${placeholders})
+      WHERE (
+        v.Business_ID IN (${placeholders})
+        OR (v.Business_ID IS NULL AND v.Owner_Account_ID IN (${ownerPlaceholders}))
+      )
         AND v.Vehicle_Status = 'Available'`,
-      bizIds
+      [...bizIds, ...ownerIds]
     );
     vehicles = vRows;
   }
 
   const data = rows.map(biz => ({
     ...biz,
-    vehicles: vehicles.filter(v => v.Business_ID === biz.Business_ID),
+    vehicles: vehicles.filter(v =>
+      v.Business_ID === biz.Business_ID ||
+      (v.Business_ID === null && v.Owner_Account_ID === biz.Owner_Account_ID)
+    ),
   }));
 
   res.json({ success: true, data });

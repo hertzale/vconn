@@ -9,7 +9,8 @@ router.get('/owners', async (req, res) => {
   try {
     const [owners] = await pool.query(
       `SELECT
-         p.Account_ID, p.Name, p.Address, p.Contact_Number, p.Email,
+         p.Account_ID, p.Name, p.Address, p.Contact_Number,
+         p.Contact_Number AS Business_ContactNo, p.Email,
          b.Business_ID, b.Business_Name, b.Latitude, b.Longitude
        FROM PERSON p
        INNER JOIN VEHICLE v ON v.Owner_Account_ID = p.Account_ID
