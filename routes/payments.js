@@ -5,6 +5,41 @@ const genID  = require('../config/idGen');
 
 const router = express.Router();
 
+// List all payments visible to the authenticated user
+router.get('/', auth, async (req, res) => {
+  try {
+    const [payments] = await pool.query(
+      `SELECT p.*, rt.Transaction_ID
+       FROM PAYMENT p
+       JOIN RENTAL_TRANSACTION rt ON p.Transaction_ID = rt.Transaction_ID
+       WHERE rt.Owner_Account_ID = ? OR rt.Customer_Account_ID = ?
+       ORDER BY p.Payment_Date DESC`,
+      [req.user.account_id, req.user.account_id]
+    );
+    res.json({ success: true, data: payments });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: 'Server error.' });
+  }
+});
+
+// Payment by transaction
+router.get('/transaction/:txId', auth, async (req, res) => {
+  try {
+    const [[payment]] = await pool.query(
+      `SELECT p.* FROM PAYMENT p
+       JOIN RENTAL_TRANSACTION rt ON p.Transaction_ID = rt.Transaction_ID
+       WHERE p.Transaction_ID = ? AND (rt.Customer_Account_ID = ? OR rt.Owner_Account_ID = ?)`,
+      [req.params.txId, req.user.account_id, req.user.account_id]
+    );
+    if (!payment) return res.status(404).json({ success: false, message: 'Payment not found.' });
+    res.json({ success: true, data: payment });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: 'Server error.' });
+  }
+});
+
 // Transaction Payment
 router.get('/:txId', auth, async (req, res) => {
   try {

@@ -38,6 +38,23 @@ router.get('/my', auth, async (req, res) => {
   }
 });
 
+// GET /api/vehicles/:id/photos
+router.get('/:id/photos', async (req, res) => {
+  try {
+    const [photos] = await pool.query(
+      `SELECT Photo_ID, Vehicle_ID, Photo_URL, Is_Primary
+       FROM VEHICLE_PHOTO
+       WHERE Vehicle_ID = ?
+       ORDER BY Is_Primary DESC, Photo_ID`,
+      [req.params.id]
+    );
+    res.json({ success: true, data: photos });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: 'Server error.' });
+  }
+});
+
 // View vehicle's details
 router.get('/:id', async (req, res) => {
   try {
