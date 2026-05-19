@@ -158,17 +158,17 @@ router.put('/:id', auth, async (req, res) => {
 
     const { vehicle_type, vehicle_model, vehicle_color, 
             seat_capacity, daily_rate, plate_number, 
-            registration_date, fuel_type } = req.body
+            registration_date, fuel_type, with_driver } = req.body
 
     await pool.query(
       `UPDATE VEHICLE SET 
         Vehicle_Type = ?, Vehicle_Model = ?, Vehicle_Color = ?,
         Seat_Capacity = ?, Daily_Rate = ?, Plate_Number = ?,
-        Registration_Date = ?, Fuel_Type = ?
+        Registration_Date = ?, Fuel_Type = ?, With_Driver = ?
        WHERE Vehicle_ID = ?`,
       [vehicle_type, vehicle_model, vehicle_color,
        seat_capacity, daily_rate, plate_number,
-       registration_date, fuel_type || null, req.params.id]
+       registration_date, fuel_type || null, with_driver !== undefined ? with_driver : null, req.params.id]
     )
 
     res.json({ success: true, message: 'Vehicle updated!' })
