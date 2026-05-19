@@ -32,6 +32,7 @@ CREATE TABLE IF NOT EXISTS BUSINESS (
     Longitude        DECIMAL(10,7)  DEFAULT NULL,
     Owner_Type       VARCHAR(30)    DEFAULT 'owner',
     Is_Active        TINYINT(1)     DEFAULT 1,
+    Is_Verified      TINYINT(1)     DEFAULT 0,
     Created_Date     DATE           NOT NULL,
     FOREIGN KEY (Owner_Account_ID) REFERENCES PERSON(Account_ID)
 );
@@ -51,6 +52,8 @@ CREATE TABLE IF NOT EXISTS VEHICLE (
     With_Driver       TINYINT(1)    DEFAULT 0,
     Business_ID       VARCHAR(12)   DEFAULT NULL,
     Owner_Account_ID  VARCHAR(12)   NOT NULL,
+    Description       VARCHAR(200)  DEFAULT NULL,
+    Pickup_Area       VARCHAR(100)  DEFAULT NULL,
     PRIMARY KEY (Vehicle_ID),
     FOREIGN KEY (Owner_Account_ID) REFERENCES PERSON(Account_ID),
     FOREIGN KEY (Business_ID)      REFERENCES BUSINESS(Business_ID),
@@ -75,6 +78,10 @@ CREATE TABLE IF NOT EXISTS RENTAL_TRANSACTION (
     FOREIGN KEY (Vehicle_ID)          REFERENCES VEHICLE(Vehicle_ID),
     FOREIGN KEY (Customer_Account_ID) REFERENCES PERSON(Account_ID),
     FOREIGN KEY (Owner_Account_ID)    REFERENCES PERSON(Account_ID),
+    Other_Details        VARCHAR(200) DEFAULT NULL,
+    Driver_Name          VARCHAR(50)  DEFAULT NULL,
+    Drivers_License_Used VARCHAR(10)  DEFAULT NULL,
+    Gas_Included         TINYINT(1)   DEFAULT 0,
     CHECK (Rental_Status IN ('Pending', 'Confirmed', 'Reserved', 'Ongoing', 'Completed', 'Cancelled', 'Overdue'))
 );
 
@@ -88,7 +95,7 @@ CREATE TABLE IF NOT EXISTS PAYMENT (
     Payment_Status VARCHAR(20)   DEFAULT 'Pending',
     PRIMARY KEY (Payment_ID),
     FOREIGN KEY (Transaction_ID) REFERENCES RENTAL_TRANSACTION(Transaction_ID),
-    CHECK (Payment_Status IN ('Paid', 'Pending', 'Refunded')),
+    CHECK (Payment_Status IN ('Paid', 'Pending', 'Refunded', 'Partial')),
     CHECK (Payment_Method IN ('Cash'))
 );
 
@@ -208,5 +215,6 @@ CREATE TABLE IF NOT EXISTS ID_COUNTER (
 INSERT INTO ID_COUNTER (entity, last_num) VALUES
     ('PERSON', 0), ('VEHICLE', 0), ('TRANSACTION', 0),
     ('PAYMENT', 0), ('FEEDBACK', 0), ('TRIP', 0),
-    ('INQUIRY', 0), ('BUSINESS', 0), ('PHOTO', 0), ('RECEIPT', 0)
+    ('INQUIRY', 0), ('BUSINESS', 0), ('PHOTO', 0), ('RECEIPT', 0),
+    ('NOTIFICATION', 0)
 ON DUPLICATE KEY UPDATE entity = entity;

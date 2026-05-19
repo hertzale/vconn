@@ -83,18 +83,19 @@ router.get('/:id', auth, async (req, res) => {
 // Booking
 router.post('/', auth, async (req, res) => {
   const {
-  vehicle_id,
-  start_date_and_time,
-  end_date_and_time,
-  start_date,
-  end_date,
-  pickup_location,
-  drop_off_location,
-  with_driver,
-  other_details,
-  driver_name,
-  drivers_license,
-} = req.body;
+    vehicle_id,
+    start_date_and_time,
+    end_date_and_time,
+    start_date,
+    end_date,
+    pickup_location,
+    drop_off_location,
+    with_driver,
+    gas_included,
+    other_details,
+    driver_name,
+    drivers_license,
+  } = req.body;
 
 // Accept either naming convention from frontend
 const startDT = start_date_and_time || start_date;
@@ -129,11 +130,19 @@ if (!vehicle_id || !startDT || !endDT || !pickup_location) {
       `INSERT INTO RENTAL_TRANSACTION
         (Transaction_ID, Vehicle_ID, Transaction_Date, Start_Date_and_Time, End_Date_and_Time,
          Pickup_Location, Drop_off_Location, Rental_Duration, With_Driver, Rental_Status,
-         Customer_Account_ID, Owner_Account_ID)
-       VALUES (?,?,?,?,?,?,?,?,?,'Pending',?,?)`,
-      [txID, vehicle_id, today, startDT, endDT,
-      pickup_location, drop_off_location || pickup_location, rentalDuration, with_driver ? 1 : 0,
-      req.user.account_id, vehicle.Owner_Account_ID]
+         Customer_Account_ID, Owner_Account_ID,
+         Other_Details, Driver_Name, Drivers_License_Used, Gas_Included)
+       VALUES (?,?,?,?,?,?,?,?,?,'Pending',?,?,?,?,?,?)`,
+      [
+        txID, vehicle_id, today, startDT, endDT,
+        pickup_location, drop_off_location || pickup_location,
+        rentalDuration, with_driver ? 1 : 0,
+        req.user.account_id, vehicle.Owner_Account_ID,
+        other_details || null,
+        driver_name || null,
+        drivers_license || null,
+        gas_included ? 1 : 0,
+      ]
     );
 
     res.status(201).json({
