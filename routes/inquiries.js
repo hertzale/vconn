@@ -230,6 +230,7 @@ router.patch('/:id/counter', auth, async (req, res) => {
   }
 });
 
+// RESPOND PATCH
 // Customer responds to a quote/counter-offer
 router.patch('/:id/respond', auth, async (req, res) => {
   const { decision, counter_price, customer_counter_message } = req.body;
@@ -237,10 +238,18 @@ router.patch('/:id/respond', auth, async (req, res) => {
   try {
     const [[inquiry]] = await pool.query(`SELECT * FROM INQUIRY WHERE Inquiry_ID = ?`, [req.params.id]);
     if (!inquiry) return res.status(404).json({ success: false, message: 'Inquiry not found.' });
-    if (inquiry.Customer_Account_ID !== req.user.account_id)
-      return res.status(403).json({ success: false, message: 'Only the customer can respond to this inquiry.' });
+    // NEW - allow both parties
+const isParty =
+  inquiry.Customer_Account_ID === req.user.account_id ||
+  inquiry.Owner_Account_ID    === req.user.account_id;
+if (!isParty)
+  return res.status(403).json({ success: false, message: 'Access denied.' });
 
-    if (inquiry.Inquiry_Status !== 'Owner_Quoted')
+    if (!['Owner_Quoted', 'Pending'].includes(inquiry.Inquiry_Status))
+      if (decision === 'accept') {
+        newStatus  = 'Accepted';   // was 'Confirmed' — must match DB CHECK constraint
+        finalPrice = inquiry.Offered_Price;  // use Offered_Price for Pending status
+      }
       return res.status(400).json({ success: false, message: `Cannot respond to an inquiry with status "${inquiry.Inquiry_Status}".` });
 
     let newStatus;
@@ -274,7 +283,8 @@ router.patch('/:id/respond', auth, async (req, res) => {
          Customer_Decision        = ?,
          Customer_Counter_Price   = ?,
          Customer_Counter_Message = ?,
-         Final_Agreed_Price       = ?
+         Final_Agreed_Price       = ?,
+         Agreed_Price             = ?
        WHERE Inquiry_ID = ?`,
       [newStatus, resolvedDecision, counter_price || null, customer_counter_message || null, finalPrice, req.params.id]
     );
