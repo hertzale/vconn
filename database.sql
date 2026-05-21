@@ -32,7 +32,6 @@ CREATE TABLE IF NOT EXISTS BUSINESS (
     Longitude        DECIMAL(10,7)  DEFAULT NULL,
     Owner_Type       VARCHAR(30)    DEFAULT 'owner',
     Is_Active        TINYINT(1)     DEFAULT 1,
-    Is_Verified      TINYINT(1)     DEFAULT 0,
     Created_Date     DATE           NOT NULL,
     FOREIGN KEY (Owner_Account_ID) REFERENCES PERSON(Account_ID)
 );
@@ -52,8 +51,6 @@ CREATE TABLE IF NOT EXISTS VEHICLE (
     With_Driver       TINYINT(1)    DEFAULT 0,
     Business_ID       VARCHAR(12)   DEFAULT NULL,
     Owner_Account_ID  VARCHAR(12)   NOT NULL,
-    Description       VARCHAR(200)  DEFAULT NULL,
-    Pickup_Area       VARCHAR(100)  DEFAULT NULL,
     PRIMARY KEY (Vehicle_ID),
     FOREIGN KEY (Owner_Account_ID) REFERENCES PERSON(Account_ID),
     FOREIGN KEY (Business_ID)      REFERENCES BUSINESS(Business_ID),
@@ -171,7 +168,6 @@ CREATE TABLE IF NOT EXISTS INQUIRY (
     Customer_Counter_Price   DECIMAL(10,2) DEFAULT NULL,
     Customer_Counter_Message VARCHAR(150)  DEFAULT NULL,
     Final_Agreed_Price       DECIMAL(10,2) DEFAULT NULL,
-    Agreed_Price             DECIMAL(10,2) DEFAULT NULL,
     Transaction_ID           VARCHAR(12)   DEFAULT NULL,
     Updated_At               DATETIME      DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (Trip_ID)             REFERENCES TRIP(Trip_ID),

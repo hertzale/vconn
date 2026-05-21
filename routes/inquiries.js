@@ -283,8 +283,7 @@ if (!isParty)
          Customer_Decision        = ?,
          Customer_Counter_Price   = ?,
          Customer_Counter_Message = ?,
-         Final_Agreed_Price       = ?,
-         Agreed_Price             = ?
+         Final_Agreed_Price       = ?
        WHERE Inquiry_ID = ?`,
       [newStatus, resolvedDecision, counter_price || null, customer_counter_message || null, finalPrice, req.params.id]
     );
